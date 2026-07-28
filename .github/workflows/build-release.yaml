@@ -89,6 +89,16 @@ jobs:
           sudo update-ca-certificates
           cp -f /etc/ssl/certs/ca-certificates.crt core/src/foss/golang/clash/component/ca/ca-certificates.crt
 
+      - name: Configure application ID
+        env:
+          CUSTOM_APPLICATION_ID: ${{ vars.CUSTOM_APPLICATION_ID }}
+          REMOVE_SUFFIX: ${{ vars.REMOVE_SUFFIX }}
+        run: |
+          test -n "$CUSTOM_APPLICATION_ID"
+          case "$REMOVE_SUFFIX" in true|false) ;; *) exit 1 ;; esac
+          printf 'custom.application.id=%s\nremove.suffix=%s\n' \
+            "$CUSTOM_APPLICATION_ID" "$REMOVE_SUFFIX" > local.properties
+
       - name: Signing properties
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
