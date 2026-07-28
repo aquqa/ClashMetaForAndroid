@@ -1,5 +1,8 @@
 name: Build Release
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -69,18 +72,20 @@ jobs:
       
       # If any change found, commit it and push
       - name: Commit and push if changes
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
         run: |
-          changes=$(git diff --name-only origin/main | wc -l)
-          if [ $changes -gt 0 ]
+          if ! git diff --quiet -- build.gradle.kts
           then
             newVersionName=${{ steps.process-version.outputs.versonName }}
             newVersionCode=${{ steps.process-version.outputs.versonCode }}
-            git config --global user.name 'GitHub Action'
-            git config --global user.email 'action@github.com'
+            git config user.name 'GitHub Action'
+            git config user.email 'action@github.com'
             git add build.gradle.kts
-            git commit -am "Bump version to $newVersionName ($newVersionCode)"
+            git commit -m "Bump version to $newVersionName ($newVersionCode)"
             git tag "v$newVersionName"
-            git push --follow-tags
+            git push origin "HEAD:$TARGET_BRANCH"
+            git push origin "v$newVersionName"
           fi
 
       - name: Update CA
@@ -116,13 +121,6 @@ jobs:
       - name: Release Build
         if: success()
         run: ./gradlew --no-daemon app:assembleMetaRelease
-
-      - name: Tag Repo
-        uses: richardsimko/update-tag@v1
-        with:
-          tag_name: ${{ inputs.release-tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release
         uses: softprops/action-gh-release@v1
